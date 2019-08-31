@@ -1,19 +1,27 @@
-import { Controller, Logger, Post, Body } from '@nestjs/common';
-import { MathService } from './math.service';
+import { Controller, Logger, Post, Body, OnModuleInit } from '@nestjs/common';
+import { IGrpcService } from './grpc.interface';
+import { Client, ClientGrpc } from '@nestjs/microservices';
+import { microserviceOptions } from './grpc.options';
 
 @Controller()
-export class AppController {
-  // Create a logger instance
+export class AppController implements OnModuleInit {
   private logger = new Logger('AppController');
 
-  // Inject the math service
-  constructor(private mathService: MathService) {}
+  @Client(microserviceOptions) // <-- Add
+  private client: ClientGrpc;  // <-- this
 
-  // Map the 'POST /add' route to this method
+  private grpcService: IGrpcService;
+
+  // constructor(private mathService: MathService) {} // <-- Remove this
+
+  onModuleInit() {                                                            // <--
+    this.grpcService = this.client.getService<IGrpcService>('AppController'); // <-- Add this
+  }                                                                           // <--
+
   @Post('add')
-  // Define the logic to be executed
   async accumulate(@Body('data') data: number[])  {
-    this.logger.log('Adding ' + data.toString()); // Log something on every call
-    return this.mathService.accumulate(data); // use math service to calc result & return
+    this.logger.log('Adding ' + data.toString());
+    // return this.mathService.accumulate(data);  // <-- Change this
+    return this.grpcService.accumulate({ data }); // <-- to this
   }
 }
